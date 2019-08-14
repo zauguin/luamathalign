@@ -1,0 +1,22 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage
+  {docstrip-luacode}
+  [2019/08/14 v0.0.1 Directly execute Lua code from DocStrip files]
+\newcatcodetable\docstrip@luacode@catcodes
+\expanded{\def\noexpand\docstrip@luacode@argscanner#1\directlua{
+  local cct = \the\docstrip@luacode@catcodes;
+  for i=0,255 do tex.setcatcode(cct, i, 12) end
+  tex.sprint(cct, "\string\\end{docstrip-luacode}")
+  local scanner = token.create'docstrip@luacode@argscanner'
+  local file = lpeg.Ct((lpeg.P'\csstring\%' * (1-lpeg.P'\string\r')^0 + lpeg.C((1-lpeg.P'\string\r')^0) * '\string\r')^0)/function(s)return table.concat(s,'\string\n')end
+  require'luacmd'('docstrip-luacode', function()
+    local name = token.scan_string()
+    local old_cct = tex.catcodetable
+    tex.catcodetable = cct
+    token.put_next(scanner)
+    token.scan_token()
+    tex.catcodetable = old_cct
+    package.preload[name], msg = loadstring(file:match(token.scan_string()))
+  end, 'protected')
+}{\relax{#1}\noexpand\end{docstrip-luacode}}}
+\endinput

@@ -1,0 +1,482 @@
+% \iffalse meta-comment
+%
+%% Copyright (C) 2019 by Marcel Krueger
+%%
+%% This file may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either
+%% version 1.3c of this license or (at your option) any later
+%% version. The latest version of this license is in:
+%%
+%% http://www.latex-project.org/lppl.txt
+%%
+%% and version 1.3 or later is part of all distributions of
+%% LaTeX version 2005/12/01 or later.
+%
+%<*batch>
+%<*gobble>
+\ifx\jobname\relax\let\documentclass\undefined\fi
+\ifx\documentclass\undefined
+\csname fi\endcsname
+%</gobble>
+\input l3docstrip.tex
+\keepsilent
+\preamble
+\endpreamble
+\generate{\file{luamathalign.sty}{\from{luamathalign.dtx}{package}}}
+\begingroup
+\def\MetaPrefix{--}
+\preamble
+\endpreamble
+\postamble
+\endpostamble
+\generate{\file{luamathalign.lua}{\from{luamathalign.dtx}{lua}}}
+\endgroup
+\endbatchfile
+%</batch>
+%<*gobble>
+\fi
+\expandafter\ifx\csname @currname\endcsname\empty
+\csname fi\endcsname
+%</gobble>
+%<*driver>
+\documentclass[full]{l3doc}
+\usepackage{luamathalign}
+\usepackage{csquotes}
+\MakeShortVerb{\|}
+\begin{document}
+\DocInput{luamathalign.dtx}
+\PrintIndex
+\PrintChanges
+\end{document}
+%</driver>
+%<*gobble>
+\fi
+%</gobble>
+% \fi
+%
+% \GetFileInfo{luamathalign.dtx}
+% \title{The \pkg{luamathalign} package\thanks{This document
+%        corresponds to \pkg{luamathalign}~0.0.1, dated~2019/08/14.}}
+% \author{Marcel Kr\"uger \\ \href{mailto:tex@2krueger.de}{tex@2krueger.de}}
+% 
+% \maketitle
+%
+% \begin{documentation}
+% \section{The problem}
+% In most cases, |amsmath| makes it simple to align multiple equations in a
+% |align| environment. But sometimes, special requirements come up.
+%
+% Maybe one of your alignment points is in an exponent, or in a radical?
+% The first attempts for such alignments often fail. For example, assume that
+% you want to align the following radicals like this (at the $x^3$ term):
+% \begin{align*}
+%   \sqrt{1-3x+3x^2+(\AlignHere x-1)^3}\\
+%   =\sqrt{1-3x+3x^2+{\AlignHere x}^3-3x^2+3x-1}\\
+%   =\sqrt{\AlignHere x^3}
+% \end{align*}
+% \enquote{Just adding \texttt{\&} at the alignment points} doesn't work:
+% \begin{verbatim}
+% \begin{align*}
+%   \sqrt{1-3x+3x^2+(&x-1)^3}\\
+%   =\sqrt{1-3x+3x^2+&x^3-3x^2+3x-1}\\
+%   =\sqrt{&x^3}
+% \end{align*}
+% \end{verbatim}
+% fails with
+% \begin{verbatim}
+% ! Missing } inserted.
+% <inserted text> 
+% }
+% l.73 \end{align*}
+% \end{verbatim}
+%
+% Another problem are nested alignments. Take this sample from \href{https://tex.stackexchange.com/questions/68547/alignment-across-nested-aligned-environments}{anonymous on \TeX\ -- \LaTeX\ StackExchange}: We want alignment like
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c \SetAlign1 &= 1 \\
+%   d &= 12 \\
+% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{align*}
+% but in
+% \begin{verbatim}
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c &= 1 \\
+%   d &= 12 \\
+% \end{aligned} \right\}&&&\text{for $Z$}
+% \end{align*}
+% \end{verbatim}
+% there is not obvious way to align the equal signs in the nested |aligned| with the outer signs.
+% \section{The solution}
+% \pkg{luamathalign} provides solutions for both problems under Lua\LaTeX:
+% \begin{function}{\AlignHere}
+% The most important new macro is \cmd\AlignHere:
+% It generates an alignment point like \texttt{\&},
+% but it can be used almost everywhere.
+% 
+% So problems like our first example can be implemented by just using \cmd\AlignHere\ instead of \texttt{\&}:
+% \begin{verbatim}
+% \begin{align*}
+%   \sqrt{1-3x+3x^2+(\AlignHere x-1)^3}\\
+%   =\sqrt{1-3x+3x^2+{\AlignHere x}^3-3x^2+3x-1}\\
+%   =\sqrt{\AlignHere x^3}
+% \end{align*}
+% \end{verbatim}
+% \begin{align*}
+%   \sqrt{1-3x+3x^2+(\AlignHere x-1)^3}\\
+%   =\sqrt{1-3x+3x^2+{\AlignHere x}^3-3x^2+3x-1}\\
+%   =\sqrt{\AlignHere x^3}
+% \end{align*}
+% \end{function}
+% Sadly, this doesn't really help with the nested alignment problem:
+% Even if we use \cmd\AlignHere\ in the \env{aligned} environment, the alignment points
+% would be inserted in the inner and not in the outer alignment.
+% For such cases, there is a variant which allows to specify at which level the alignment should happen:
+% \begin{function}{\SetAlign,\DoAlign}
+% First, \cmd\SetAlign\meta{number} is used with an arbitrary \meta{number} to mark the alignment points as with |&| or \cmd\AlignHere.
+% Then, \cmd\DoAlign\meta{number} indicates at which level the alignment should take place.
+% This is done by writing \cmd\DoAlign\meta{number} (with the same \meta{number} as in \cmd\SetAlign) at a point where a |&| which the \cmd\SetAlign\ replaced could have been.
+% For example, our nested alignment above wanted to align the inner \env{aligned} and the outer \env{align*} at the same point,
+% so |\SetAlign1| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
+% Then the \cmd\DoAlign has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
+% \begin{verbatim}
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c \SetAlign1 &= 1 \\
+%   d &= 12 \\
+% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{align*}
+% \end{verbatim}
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c \SetAlign1 &= 1 \\
+%   d &= 12 \\
+% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{align*}
+% \end{function}
+% \end{documentation}
+% \begin{implementation}
+% \section{The implementation}
+% \subsection{Lua}
+% \iffalse
+%<*gobble>
+\RequirePackage{docstrip-luacode}
+\begin{docstrip-luacode}{luamathalign}
+%</gobble>
+%<*lua>
+% \fi
+%    \begin{macrocode}
+local luacmd = require'luacmd'
+local luaprop = require'luaprop'('mathalign')
+local hlist = node.id'hlist'
+local vlist = node.id'vlist'
+local whatsit = node.id'whatsit'
+local user_defined = node.subtype'user_defined'
+local whatsit_id = luatexbase.new_whatsit'mathalign'
+local whatsit_request_id = luatexbase.new_whatsit'mathalign_request'
+local node_cmd = token.command_id'node'
+-- We might want to add y later
+local vmeasure
+local function is_marked(mark, list)
+  for n in node.traverse(list) do
+    local id = n.id
+    if id == hlist or id == vlist then
+      if is_marked(mark, n.head) then return true end
+    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+      return true
+    end
+  end
+  return false
+end
+local function assert_unmarked(mark, list, ...)
+  local marked = is_marked(mark, list)
+  if marked then
+    tex.error([[Multiple alignment marks]], [[Oh no, I found multiple alignment marks of type ]] .. mark
+      .. [[ in a mark block where I already had an alignment mark of that type. ]]
+      .. [[ You should look at both of them and decide which one is right. I will continue with the first one for now. ]])
+  end
+  return ...
+end
+local function measure(mark, list)
+  local x, last = 0, list.head
+  for n in node.traverse(last) do
+    local id = n.id
+    if id == hlist then
+      local w, h, d = node.rangedimensions(list, last, n)
+      x, last = x + w, n
+      local dx = measure(mark, n)
+      if dx then return assert_unmarked(mark, n.next, dx + x) end
+    elseif id == vlist then
+      local w, h, d = node.rangedimensions(list, last, n)
+      x, last = x + w, n
+      local dx = vmeasure(mark, n)
+      if dx then return assert_unmarked(mark, n.next, dx + x) end
+    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+      local w, h, d = node.rangedimensions(list, last, n)
+      local after
+      list.head, after = node.remove(list.head, n)
+      return assert_unmarked(mark, after, x + w)
+    end
+  end
+end
+function vmeasure(mark, list)
+  for n in node.traverse(list.head) do
+    local id = n.id
+    if id == hlist then
+      local dx = measure(mark, n)
+      if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+    elseif id == vlist then
+      local dx = vmeasure(mark, n)
+      if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+      local after
+      list.head, after = node.remove(list.head, n)
+      return assert_unmarked(mark, after, 0)
+    end
+  end
+end
+
+local mark, afterkern
+luatexbase.add_to_callback('mlist_to_hlist', function(head, display_type, need_penalties)
+  local n = node.mlist_to_hlist(head, display_type, need_penalties)
+  if mark then
+    local x = measure(mark, n)
+    local k = node.new'kern'
+    local off = x - n.width
+    k.kern, afterkern.kern = off, -off
+    k.kern = x - n.width
+    node.insert_after(n.head, nil, k)
+    n.width = x
+    mark, afterkern = nil, nil
+  end
+  return n
+end, 'align.mlist_to_hlist')
+
+local function get_kerntoken(newmark)
+  assert(not mark)
+  mark, afterkern = newmark, node.new'kern'
+  return token.new(node.direct.todirect(afterkern), node_cmd)
+end
+
+local function insert_whatsit(mark)
+  local n = node.new('whatsit', 'user_defined')
+  n.user_id, n.type, n.value = whatsit_id, string.byte'd', mark
+  node.write(n)
+end
+luacmd("SetAlign", function()
+  return insert_whatsit(token.scan_int())
+end, "protected")
+
+function handle_whatsit(mark)
+  token.put_next(token.new(38, 4), get_kerntoken(mark))
+end
+luacmd("DoAlign", function()
+  return handle_whatsit(token.scan_int())
+end, "protected")
+
+luacmd("AlignField@begin", function()
+  local nest = tex.nest.top
+  luaprop.set(nest.head, false)
+end, "protected")
+luacmd("AlignHere", function()
+  for i=tex.nest.ptr,0,-1 do
+    local t = tex.nest[i].head
+    if luaprop.query(t) ~= nil then
+      luaprop.set(t, true)
+      insert_whatsit(-i)
+      return
+    end
+  end
+  error[[No request found]]
+end, "protected")
+luacmd("AlignField@end@early", function()
+  local t = tex.nest.top.head
+  if luaprop.set(t, nil) == true then
+    handle_whatsit(-tex.nest.ptr)
+  end
+end, "protected")
+local delayed
+luacmd("AlignField@end", function()
+  local nest = tex.nest.top
+  local t = nest.head
+  if luaprop.set(t, nil) == true then
+    assert(not delayed)
+    delayed = {get_kerntoken(-tex.nest.ptr), token.new(38, 4)}
+  end
+end, "protected")
+luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
+  if delayed and groupcode == "align_set" then
+-- HACK: token.put_next puts the tokens into the input stream after the cell
+-- is fully read, before the next starts. This will act as if the content was
+-- written as the first element of the next field.
+    token.put_next(delayed)
+    delayed = nil
+  end
+  return true
+end, "delayed_tokens_inserter")
+%    \end{macrocode}
+% \subsection{LaTeX}
+% \iffalse
+%</lua>
+%<*gobble>
+\end{docstrip-luacode}
+%</gobble>
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage
+  {luamathalign}
+  [2019/08/14 v0.0.1 additional math alignment tricks using Lua]
+% \fi
+% The actual \LaTeX\ package just loads the Lua module and patches \pkg{amsmath}:
+%    \begin{macrocode}
+\RequirePackage{scrlfile}
+\directlua{require'luamathalign'}
+\AfterPackage*{amsmath}{
+  \def\align@preamble{%
+     &\hfil
+      \strut@
+      \setboxz@h{\@lign$\m@th\displaystyle{\AlignField@begin##\AlignField@end}$}%
+      \ifmeasuring@\savefieldlength@\fi
+      \set@field
+      \tabskip\z@skip
+     &\setboxz@h{\@lign$\m@th\displaystyle{{}##}$}%
+      \ifmeasuring@\savefieldlength@\fi
+      \set@field
+      \hfil
+      \tabskip\alignsep@
+  }
+  \renewcommand{\start@aligned}[2]{%
+    \RIfM@\else
+        \nonmatherr@{\begin{\@currenvir}}%
+    \fi
+    \savecolumn@ % Assumption: called inside a group
+    \alignedspace@left
+    \if #1t\vtop \else \if#1b \vbox \else \vcenter \fi \fi \bgroup
+        \maxfields@#2\relax
+        \ifnum\maxfields@>\m@ne
+            \multiply\maxfields@\tw@
+            \let\math@cr@@@\math@cr@@@alignedat
+            \alignsep@\z@skip
+        \else
+            \let\math@cr@@@\math@cr@@@aligned
+            \alignsep@\minalignsep
+        \fi
+        \Let@ \chardef\dspbrk@context\@ne
+        \default@tag
+        \spread@equation % no-op if already called
+        \global\column@\z@
+        \ialign\bgroup
+           &\column@plus
+            \hfil
+            \strut@
+            $\m@th\displaystyle{\AlignField@begin##\AlignField@end}$%
+            \tabskip\z@skip
+           &\column@plus
+            $\m@th\displaystyle{{}##}$%
+            \hfil
+            \tabskip\alignsep@
+            \crcr
+  }
+  \edef\math@cr@@@alignedat{\AlignField@end@early
+    \unexpanded\expandafter{\math@cr@@@alignedat}}
+  \edef\math@cr{\AlignField@end@early
+    \unexpanded\expandafter{\math@cr}}
+}
+%    \end{macrocode}
+% \iffalse
+%</package>
+% \fi
+% \end{implementation}
+\endinput
+% \begin{macro}{\overset}
+%    \begin{macrocode}
+\let\__alignedsets_original_overset:nn\overset
+\cs_set:Npn\overset{
+  \group_align_safe_begin:
+  \__alignedsets_modified_overset:nwn
+}
+\NewExpandableDocumentCommand\__alignedsets_modified_overset:nwn{mt{&}m}{
+  \group_align_safe_end:
+  \IfBooleanTF{#2}{
+    \group_begin:
+    \hbox_set:Nn\l__alignedsets_clap_box{
+      $
+      \displaystyle
+      {}\__alignedsets_original_overset:nn{\mathclap{#1}}{#3}{}
+      $
+    }
+    \hbox_set:Nn\l__alignedsets_full_box{
+      $
+      \displaystyle
+      {}\__alignedsets_original_overset:nn{#1}{#3}{}
+      $
+    }
+    \hspace{
+      \dim_eval:n{(\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2}
+    }
+    \exp_args:NNNx
+        \group_end:
+        {&}
+        \hspace{
+          -\dim_eval:n{
+            (\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2
+          }
+        }
+    \__alignedsets_original_overset:nn{#1}{#3}
+  }{
+    \__alignedsets_original_overset:nn{#1}{#3}
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\underset}
+%    \begin{macrocode}
+\let\__alignedsets_original_underset:nn\underset
+\cs_set:Npn\underset{
+  \group_align_safe_begin:
+  \__alignedsets_modified_underset:nwn
+}
+\NewExpandableDocumentCommand\__alignedsets_modified_underset:nwn{mt{&}m}{
+  \group_align_safe_end:
+  \IfBooleanTF{#2}{
+    \group_begin:
+    \hbox_set:Nn\l__alignedsets_clap_box{
+      $
+      \displaystyle
+      {}\__alignedsets_original_underset:nn{\mathclap{#1}}{#3}{}
+      \m@th
+      $
+    }
+    \hbox_set:Nn\l__alignedsets_full_box{
+      $
+      \displaystyle
+      {}\__alignedsets_original_underset:nn{#1}{#3}{}
+      \m@th
+      $
+    }
+    \hspace{
+      \dim_eval:n{(\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2}
+    }
+    \exp_args:NNNx
+        \group_end:
+        {&}
+        \hspace{
+          -\dim_eval:n{
+            (\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2
+          }
+        }
+    \__alignedsets_original_underset:nn{#1}{#3}
+  }{
+    \__alignedsets_original_underset:nn{#1}{#3}
+  }
+}
+%    \end{macrocode}
+% \end{macro}
