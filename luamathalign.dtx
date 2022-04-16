@@ -95,9 +95,9 @@
 % aaaa &= 1  &&\text{for $X$} \\
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
-%   c \SetAlign1 &= 1 \\
+%   c \SetAlignmentPoint1 &= 1 \\
 %   d &= 12 \\
-% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
 % \end{align*}
 % but in
 % \begin{verbatim}
@@ -136,21 +136,21 @@
 % Even if we use \cmd\AlignHere\ in the \env{aligned} environment, the alignment points
 % would be inserted in the inner and not in the outer alignment.
 % For such cases, there is a variant which allows to specify at which level the alignment should happen:
-% \begin{function}{\SetAlign,\DoAlign}
-% First, \cmd\SetAlign\meta{number} is used with an arbitrary \meta{number} to mark the alignment points as with |&| or \cmd\AlignHere.
-% Then, \cmd\DoAlign\meta{number} indicates at which level the alignment should take place.
-% This is done by writing \cmd\DoAlign\meta{number} (with the same \meta{number} as in \cmd\SetAlign) at a point where a |&| which the \cmd\SetAlign\ replaced could have been.
+% \begin{function}{\SetAlignmentPoint,\ExecuteAlignment}
+% First, \cmd\SetAlignmentPoint\meta{number} is used with an arbitrary positive \meta{number} to mark the alignment points as with |&| or \cmd\AlignHere.
+% Then, \cmd\ExecuteAlignment\meta{number} indicates at which level the alignment should take place.
+% This is done by writing \cmd\ExecuteAlignment\meta{number} (with the same \meta{number} as in \cmd\SetAlignmentPoint) at a point where a |&| which the \cmd\SetAlignmentPoint\ replaced could have been.
 % For example, our nested alignment above wanted to align the inner \env{aligned} and the outer \env{align*} at the same point,
-% so |\SetAlign1| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
-% Then the \cmd\DoAlign has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
+% so |\SetAlignmentPoint1| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
+% Then the \cmd\ExecuteAlignment has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
 % \begin{verbatim}
 % \begin{align*}
 % aaaa &= 1  &&\text{for $X$} \\
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
-%   c \SetAlign1 &= 1 \\
+%   c \SetAlignmentPoint1 &= 1 \\
 %   d &= 12 \\
-% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
 % \end{align*}
 % \end{verbatim}
 % \begin{align*}
@@ -159,7 +159,7 @@
 % \left. \begin{aligned}
 %   c \SetAlign1 &= 1 \\
 %   d &= 12 \\
-% \end{aligned} \right\}\DoAlign1 &&\text{for $Z$}
+% \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
 % \end{align*}
 % \end{function}
 % \end{documentation}
@@ -174,15 +174,15 @@
 %<*lua>
 % \fi
 %    \begin{macrocode}
-local luacmd = require'luacmd'
-local luaprop = require'luaprop'('mathalign')
-local hlist = node.id'hlist'
-local vlist = node.id'vlist'
-local whatsit = node.id'whatsit'
+local luacmd       = require'luacmd'
+local luaprop      = require'luaprop'('mathalign')
+local hlist        = node.id'hlist'
+local vlist        = node.id'vlist'
+local whatsit      = node.id'whatsit'
 local user_defined = node.subtype'user_defined'
-local whatsit_id = luatexbase.new_whatsit'mathalign'
-local whatsit_request_id = luatexbase.new_whatsit'mathalign_request'
-local node_cmd = token.command_id'node'
+local whatsit_id   = luatexbase.new_whatsit'mathalign'
+local node_cmd     = token.command_id'node'
+local ampersand    = token.new(38, 4)
 -- We might want to add y later
 local vmeasure
 local function is_marked(mark, list)
@@ -236,7 +236,7 @@ function vmeasure(mark, list)
     elseif id == vlist then
       local dx = vmeasure(mark, n)
       if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
-    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
       local after
       list.head, after = node.remove(list.head, n)
       return assert_unmarked(mark, after, 0)
@@ -245,19 +245,17 @@ function vmeasure(mark, list)
 end
 
 local mark, afterkern
-luatexbase.add_to_callback('mlist_to_hlist', function(head, display_type, need_penalties)
-  local n = node.mlist_to_hlist(head, display_type, need_penalties)
+luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n, display_type, need_penalties)
   if mark then
     local x = measure(mark, n)
     local k = node.new'kern'
     local off = x - n.width
     k.kern, afterkern.kern = off, -off
-    k.kern = x - n.width
     node.insert_after(n.head, nil, k)
     n.width = x
     mark, afterkern = nil, nil
   end
-  return n
+  return true
 end, 'align.mlist_to_hlist')
 
 local function get_kerntoken(newmark)
@@ -267,49 +265,56 @@ local function get_kerntoken(newmark)
 end
 
 local function insert_whatsit(mark)
-  local n = node.new('whatsit', 'user_defined')
+  local n = node.new(whatsit, user_defined)
   n.user_id, n.type, n.value = whatsit_id, string.byte'd', mark
   node.write(n)
 end
-luacmd("SetAlign", function()
-  return insert_whatsit(token.scan_int())
+luacmd("SetAlignmentPoint", function()
+  local mark = token.scan_int()
+  if mark < 0 then
+    for i=tex.nest.ptr,0,-1 do
+      local t = tex.nest[i].head
+      if luaprop.query(t) ~= nil then
+        mark = mark + 1
+        if mark == 0 then
+          luaprop.set(t, true)
+          return insert_whatsit(-i)
+        end
+      end
+    end
+    tex.error('No compatible alignment environment found',
+    'This either means that \\SetAlignmentPoint was used outside of an alignment\n\z
+      or the used alignment is not setup for use with luamathalign.\n\z
+      In the latter case you might want to look at allocated alignment classes.')
+  else
+    return insert_whatsit(mark)
+  end
 end, "protected")
 
 function handle_whatsit(mark)
-  token.put_next(token.new(38, 4), get_kerntoken(mark))
+  token.put_next(ampersand, get_kerntoken(mark))
 end
-luacmd("DoAlign", function()
+luacmd("ExecuteAlignment", function()
   return handle_whatsit(token.scan_int())
 end, "protected")
 
-luacmd("AlignField@begin", function()
+luacmd("LuaMathAlign@begin", function()
   local nest = tex.nest.top
   luaprop.set(nest.head, false)
 end, "protected")
-luacmd("AlignHere", function()
-  for i=tex.nest.ptr,0,-1 do
-    local t = tex.nest[i].head
-    if luaprop.query(t) ~= nil then
-      luaprop.set(t, true)
-      insert_whatsit(-i)
-      return
-    end
-  end
-  error[[No request found]]
-end, "protected")
-luacmd("AlignField@end@early", function()
+luacmd("LuaMathAlign@end@early", function()
   local t = tex.nest.top.head
   if luaprop.set(t, nil) == true then
     handle_whatsit(-tex.nest.ptr)
   end
 end, "protected")
 local delayed
-luacmd("AlignField@end", function()
+luacmd("LuaMathAlign@end", function()
   local nest = tex.nest.top
   local t = nest.head
   if luaprop.set(t, nil) == true then
     assert(not delayed)
-    delayed = {get_kerntoken(-tex.nest.ptr), token.new(38, 4)}
+    delayed = {get_kerntoken(-tex.nest.ptr), ampersand}
   end
 end, "protected")
 luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
@@ -339,11 +344,11 @@ end, "delayed_tokens_inserter")
 %    \begin{macrocode}
 \RequirePackage{scrlfile}
 \directlua{require'luamathalign'}
-\AfterPackage*{amsmath}{
+\AfterPackage*{amsmath}{%
   \def\align@preamble{%
      &\hfil
       \strut@
-      \setboxz@h{\@lign$\m@th\displaystyle{\AlignField@begin##\AlignField@end}$}%
+      \setboxz@h{\@lign$\m@th\displaystyle{\LuaMathAlign@begin##\LuaMathAlign@end}$}%
       \ifmeasuring@\savefieldlength@\fi
       \set@field
       \tabskip\z@skip
@@ -377,7 +382,7 @@ end, "delayed_tokens_inserter")
            &\column@plus
             \hfil
             \strut@
-            $\m@th\displaystyle{\AlignField@begin##\AlignField@end}$%
+            $\m@th\displaystyle{\LuaMathAlign@begin##\LuaMathAlign@end}$%
             \tabskip\z@skip
            &\column@plus
             $\m@th\displaystyle{{}##}$%
@@ -385,98 +390,17 @@ end, "delayed_tokens_inserter")
             \tabskip\alignsep@
             \crcr
   }
-  \edef\math@cr@@@alignedat{\AlignField@end@early
+  \edef\math@cr@@@alignedat{\LuaMathAlign@end@early
     \unexpanded\expandafter{\math@cr@@@alignedat}}
-  \edef\math@cr{\AlignField@end@early
+  \edef\math@cr{\LuaMathAlign@end@early
     \unexpanded\expandafter{\math@cr}}
+  \edef\endaligned{\LuaMathAlign@end@early
+    \unexpanded\expandafter{\endaligned}}
 }
+\protected\def\AlignHere{\SetAlignmentPoint\m@ne}
 %    \end{macrocode}
 % \iffalse
 %</package>
 % \fi
 % \end{implementation}
 \endinput
-% \begin{macro}{\overset}
-%    \begin{macrocode}
-\let\__alignedsets_original_overset:nn\overset
-\cs_set:Npn\overset{
-  \group_align_safe_begin:
-  \__alignedsets_modified_overset:nwn
-}
-\NewExpandableDocumentCommand\__alignedsets_modified_overset:nwn{mt{&}m}{
-  \group_align_safe_end:
-  \IfBooleanTF{#2}{
-    \group_begin:
-    \hbox_set:Nn\l__alignedsets_clap_box{
-      $
-      \displaystyle
-      {}\__alignedsets_original_overset:nn{\mathclap{#1}}{#3}{}
-      $
-    }
-    \hbox_set:Nn\l__alignedsets_full_box{
-      $
-      \displaystyle
-      {}\__alignedsets_original_overset:nn{#1}{#3}{}
-      $
-    }
-    \hspace{
-      \dim_eval:n{(\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2}
-    }
-    \exp_args:NNNx
-        \group_end:
-        {&}
-        \hspace{
-          -\dim_eval:n{
-            (\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2
-          }
-        }
-    \__alignedsets_original_overset:nn{#1}{#3}
-  }{
-    \__alignedsets_original_overset:nn{#1}{#3}
-  }
-}
-%    \end{macrocode}
-% \end{macro}
-% \begin{macro}{\underset}
-%    \begin{macrocode}
-\let\__alignedsets_original_underset:nn\underset
-\cs_set:Npn\underset{
-  \group_align_safe_begin:
-  \__alignedsets_modified_underset:nwn
-}
-\NewExpandableDocumentCommand\__alignedsets_modified_underset:nwn{mt{&}m}{
-  \group_align_safe_end:
-  \IfBooleanTF{#2}{
-    \group_begin:
-    \hbox_set:Nn\l__alignedsets_clap_box{
-      $
-      \displaystyle
-      {}\__alignedsets_original_underset:nn{\mathclap{#1}}{#3}{}
-      \m@th
-      $
-    }
-    \hbox_set:Nn\l__alignedsets_full_box{
-      $
-      \displaystyle
-      {}\__alignedsets_original_underset:nn{#1}{#3}{}
-      \m@th
-      $
-    }
-    \hspace{
-      \dim_eval:n{(\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2}
-    }
-    \exp_args:NNNx
-        \group_end:
-        {&}
-        \hspace{
-          -\dim_eval:n{
-            (\box_wd:N\l__alignedsets_full_box-\box_wd:N\l__alignedsets_clap_box)/2
-          }
-        }
-    \__alignedsets_original_underset:nn{#1}{#3}
-  }{
-    \__alignedsets_original_underset:nn{#1}{#3}
-  }
-}
-%    \end{macrocode}
-% \end{macro}
