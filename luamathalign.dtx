@@ -96,7 +96,7 @@
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
 %   c \SetAlignmentPoint1 &= 1 \\
-%   d &= 12 \\
+%   d &= 12
 % \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
 % \end{align*}
 % but in
@@ -106,7 +106,7 @@
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
 %   c &= 1 \\
-%   d &= 12 \\
+%   d &= 12
 % \end{aligned} \right\}&&&\text{for $Z$}
 % \end{align*}
 % \end{verbatim}
@@ -137,30 +137,61 @@
 % would be inserted in the inner and not in the outer alignment.
 % For such cases, there is a variant which allows to specify at which level the alignment should happen:
 % \begin{function}{\SetAlignmentPoint,\ExecuteAlignment}
-% First, \cmd\SetAlignmentPoint\meta{number} is used with an arbitrary positive \meta{number} to mark the alignment points as with |&| or \cmd\AlignHere.
-% Then, \cmd\ExecuteAlignment\meta{number} indicates at which level the alignment should take place.
-% This is done by writing \cmd\ExecuteAlignment\meta{number} (with the same \meta{number} as in \cmd\SetAlignmentPoint) at a point where a |&| which the \cmd\SetAlignmentPoint\ replaced could have been.
+% The primary command for this is \cmd\SetAlignmentPoint\meta{number}. When called with a negative number it specifies the nesting level.
+% For example when \meta{number} is -1 it is the same as \cmd\AlignHere, while for -2 it is aligning one level higher and so on.
+%
 % For example, our nested alignment above wanted to align the inner \env{aligned} and the outer \env{align*} at the same point,
-% so |\SetAlignmentPoint1| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
+% so |\SetAlignmentPoint-2| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
 % Then the \cmd\ExecuteAlignment has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
 % \begin{verbatim}
 % \begin{align*}
 % aaaa &= 1  &&\text{for $X$} \\
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
-%   c \SetAlignmentPoint1 &= 1 \\
-%   d &= 12 \\
-% \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
+%   c \SetAlignmentPoint-2 &= 1 \\
+%   d &= 12
+% \end{aligned} \right\}&&\text{for $Z$}
 % \end{align*}
 % \end{verbatim}
 % \begin{align*}
 % aaaa &= 1  &&\text{for $X$} \\
 % bbbb &= 1  &&\text{for $Y$} \\
 % \left. \begin{aligned}
-%   c \SetAlign1 &= 1 \\
-%   d &= 12 \\
-% \end{aligned} \right\}\ExecuteAlignment1 &&\text{for $Z$}
+%   c \SetAlignmentPoint-2 &= 1 \\
+%   d &= 12
+% \end{aligned} \right\}&&\text{for $Z$}
 % \end{align*}
+%
+% If you do not want to keep track of the right nesting level you can explicitly mark a level and refer to it.
+% To do so, use a non-negative \meta{number}.
+% When \cmd\SetAlignmentPoint is used with a non-negative \meta{number} then \cmd\ExecuteAlignment\meta{number}
+% must be executed afterwards with the same \meta{number} at a point where adding a |&| would add a valid alignment point at the right level.
+%
+% Our example above could therefore also be written as
+% \begin{verbatim}
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c \SetAlignmentPoint0 &= 1 \\
+%   d &= 12
+% \end{aligned} \right\}\ExecuteAlignment0 &&\text{for $Z$}
+% \end{align*}
+% \end{verbatim}
+% \begin{align*}
+% aaaa &= 1  &&\text{for $X$} \\
+% bbbb &= 1  &&\text{for $Y$} \\
+% \left. \begin{aligned}
+%   c \SetAlignmentPoint0 &= 1 \\
+%   d &= 12
+% \end{aligned} \right\}\ExecuteAlignment0 &&\text{for $Z$}
+% \end{align*}
+%
+% This variant is also useful when working with custom alignment environment not prepared to work with luamathalign.
+% By default \cmd\SetAlignmentPoint\meta{number} with negative numbers (and therefore also \cmd\AlignHere) only work with
+% amsmath's \texttt{\{align\}}, \texttt{\{aligned\}} and their variants.
+% If you have another environment which also follows similar alignment rules then you can either restrict yourself to
+% non-negative \meta{number}s in combination with \cmd\ExecuteAlignment or patch these environments similar to what luamathalign does for amsmath.
 % \end{function}
 % \end{documentation}
 % \begin{implementation}
@@ -342,9 +373,14 @@ end, "delayed_tokens_inserter")
 % \fi
 % The actual \LaTeX\ package just loads the Lua module and patches \pkg{amsmath}:
 %    \begin{macrocode}
-\RequirePackage{scrlfile}
+% \RequirePackage{scrlfile}
 \directlua{require'luamathalign'}
-\AfterPackage*{amsmath}{%
+\IfPackageLoadedTF{amsmath}{%
+  \@firstofone
+}{%
+  \AddToHook{package/amsmath/after}
+}
+{%
   \def\align@preamble{%
      &\hfil
       \strut@
