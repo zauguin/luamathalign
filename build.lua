@@ -12,10 +12,10 @@ uploadconfig = {
   author = "Marcel Krüger",
   license = "lppl1.3c",
   summary = "More flexible alignment in amsmath environments",
-  ctanPath = "/macros/luatex/latex/luamathalign`",
+  ctanPath = "/macros/luatex/latex/luamathalign/",
   -- repository = "https://github.com/zauguin/luamathalign/"
   description = "Allow aligning mathematical expressions on points where \z
-    where direcly using & is not possible, especially in nested macros or environments.",
+    where direcly using &amp; is not possible, especially in nested macros or environments.",
   topic = {'maths', 'luatex'},
   -- update = true,
 }
