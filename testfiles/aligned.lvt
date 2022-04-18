@@ -1,0 +1,15 @@
+\input{regression-test}
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{luamathalign}
+\begin{document}
+\START
+\showoutput
+\begin{align*}
+   -1&=e^{i\pi}\\
+   \begin{aligned}
+      \underline{0\SetAlignmentPoint-2=\AlignHere e^{i\pi}+1}\\
+      \underline{            \mathrel{}\AlignHere e^{i\pi}+(-1)^2}
+   \end{aligned}
+\end{align*}
+\end{document}
