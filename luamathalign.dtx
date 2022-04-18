@@ -215,7 +215,6 @@ local whatsit_id   = luatexbase.new_whatsit'mathalign'
 local node_cmd     = token.command_id'node'
 local ampersand    = token.new(38, 4)
 -- We might want to add y later
-local vmeasure
 local function is_marked(mark, list)
   for n in node.traverse(list) do
     local id = n.id
@@ -236,43 +235,47 @@ local function assert_unmarked(mark, list, ...)
   end
   return ...
 end
-local function measure(mark, list)
-  local x, last = 0, list.head
-  for n in node.traverse(last) do
-    local id = n.id
-    if id == hlist then
-      local w, h, d = node.rangedimensions(list, last, n)
-      x, last = x + w, n
-      local dx = measure(mark, n)
-      if dx then return assert_unmarked(mark, n.next, dx + x) end
-    elseif id == vlist then
-      local w, h, d = node.rangedimensions(list, last, n)
-      x, last = x + w, n
-      local dx = vmeasure(mark, n)
-      if dx then return assert_unmarked(mark, n.next, dx + x) end
-    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
-      local w, h, d = node.rangedimensions(list, last, n)
-      local after
-      list.head, after = node.remove(list.head, n)
-      return assert_unmarked(mark, after, x + w)
+local measure do
+  local vmeasure
+  local function hmeasure(mark, list)
+    local x, last = 0, list.head
+    for n in node.traverse(last) do
+      local id = n.id
+      if id == hlist then
+        local w, h, d = node.rangedimensions(list, last, n)
+        x, last = x + w, n
+        local dx = hmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, dx + x) end
+      elseif id == vlist then
+        local w, h, d = node.rangedimensions(list, last, n)
+        x, last = x + w, n
+        local dx = vmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, dx + x) end
+      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+        local w, h, d = node.rangedimensions(list, last, n)
+        local after
+        list.head, after = node.remove(list.head, n)
+        return assert_unmarked(mark, after, x + w)
+      end
     end
   end
-end
-function vmeasure(mark, list)
-  for n in node.traverse(list.head) do
-    local id = n.id
-    if id == hlist then
-      local dx = measure(mark, n)
-      if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
-    elseif id == vlist then
-      local dx = vmeasure(mark, n)
-      if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
-    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
-      local after
-      list.head, after = node.remove(list.head, n)
-      return assert_unmarked(mark, after, 0)
+  function vmeasure(mark, list)
+    for n in node.traverse(list.head) do
+      local id = n.id
+      if id == hlist then
+        local dx = hmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+      elseif id == vlist then
+        local dx = vmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+        local after
+        list.head, after = node.remove(list.head, n)
+        return assert_unmarked(mark, after, 0)
+      end
     end
   end
+  measure = hmeasure
 end
 
 local mark, afterkern
