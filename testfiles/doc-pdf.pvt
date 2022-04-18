@@ -1,0 +1,27 @@
+\input{regression-test.tex}
+\documentclass{article}
+\usepackage{luamathalign}
+\usepackage{amsmath}
+\begin{document}
+\begin{align*}
+  \sqrt{1-3x+3x^2+(\AlignHere x-1)^3}\\
+  =\sqrt{1-3x+3x^2+{\AlignHere x}^3-3x^2+3x-1}\\
+  =\sqrt{\AlignHere x^3}
+\end{align*}
+\begin{align*}
+  aaaa &= 1 &&\text{for $X$} \\
+  bbbb &= 1 &&\text{for $Y$} \\
+  \left. \begin{aligned}
+    c \SetAlignmentPoint-2 &= 1 \\
+    d &= 12
+  \end{aligned} \right\}&&\text{for $Z$}
+\end{align*}
+\begin{align*}
+  aaaa &= 1 &&\text{for $X$} \\
+  bbbb &= 1 &&\text{for $Y$} \\
+  \left. \begin{aligned}
+    c \SetAlignmentPoint0 &= 1 \\
+    d &= 12
+  \end{aligned} \right\}\ExecuteAlignment0 &&\text{for $Z$}
+\end{align*}
+\end{document}
