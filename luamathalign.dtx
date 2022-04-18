@@ -43,6 +43,7 @@
 \usepackage{luamathalign}
 \usepackage{csquotes}
 \MakeShortVerb{\|}
+\setlength\IndexMin{100pt}
 \begin{document}
 \DocInput{luamathalign.dtx}
 \PrintIndex
@@ -142,7 +143,7 @@
 %
 % For example, our nested alignment above wanted to align the inner \env{aligned} and the outer \env{align*} at the same point,
 % so |\SetAlignmentPoint-2| is used directly next to a inner alignment point (here |&|, \cmd\AlignHere\ would work too).
-% Then the \cmd\ExecuteAlignment has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
+% Then the \cmd\ExecuteAlignment\ has to appear in the context of the outer \env{align*}, so it can be written e.g. directly before the next |&| of the outer \env{align*}:
 % \begin{verbatim}
 % \begin{align*}
 % aaaa &= 1  &&\text{for $X$} \\
@@ -164,7 +165,7 @@
 %
 % If you do not want to keep track of the right nesting level you can explicitly mark a level and refer to it.
 % To do so, use a non-negative \meta{number}.
-% When \cmd\SetAlignmentPoint is used with a non-negative \meta{number} then \cmd\ExecuteAlignment\meta{number}
+% When \cmd\SetAlignmentPoint\ is used with a non-negative \meta{number} then \cmd\ExecuteAlignment\meta{number}
 % must be executed afterwards with the same \meta{number} at a point where adding a |&| would add a valid alignment point at the right level.
 %
 % Our example above could therefore also be written as
@@ -191,7 +192,7 @@
 % By default \cmd\SetAlignmentPoint\meta{number} with negative numbers (and therefore also \cmd\AlignHere) only work with
 % amsmath's \texttt{\{align\}}, \texttt{\{aligned\}} and their variants.
 % If you have another environment which also follows similar alignment rules then you can either restrict yourself to
-% non-negative \meta{number}s in combination with \cmd\ExecuteAlignment or patch these environments similar to what luamathalign does for amsmath.
+% non-negative \meta{number}s in combination with \cmd\ExecuteAlignment\ or patch these environments similar to what luamathalign does for amsmath.
 % \end{function}
 % \end{documentation}
 % \begin{implementation}
@@ -221,7 +222,8 @@ local function is_marked(mark, list)
     local id = n.id
     if id == hlist or id == vlist then
       if is_marked(mark, n.head) then return true end
-    elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+    elseif id == whatsit and n.subtype == user_defined
+        and n.user_id == whatsit_id and n.value == mark then
       return true
     end
   end
@@ -230,9 +232,10 @@ end
 local function assert_unmarked(mark, list, ...)
   local marked = is_marked(mark, list)
   if marked then
-    tex.error([[Multiple alignment marks]], [[Oh no, I found multiple alignment marks of type ]] .. mark
-      .. [[ in a mark block where I already had an alignment mark of that type. ]]
-      .. [[ You should look at both of them and decide which one is right. I will continue with the first one for now. ]])
+  tex.error("Multiple alignment marks", "I found multiple alignment marks \z
+      of type " .. mark .. " in an alignment where I already had an \z
+      alignment mark of that type. You should look at both of them and \z
+      decide which one is right. I will continue with the first one for now.")
   end
   return ...
 end
@@ -252,7 +255,8 @@ local measure do
         x, last = x + w, n
         local dx = vmeasure(mark, n)
         if dx then return assert_unmarked(mark, n.next, dx + x) end
-      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id and n.value == mark then
         local w, h, d = node.rangedimensions(list, last, n)
         local after
         list.head, after = node.remove(list.head, n)
@@ -269,7 +273,8 @@ local measure do
       elseif id == vlist then
         local dx = vmeasure(mark, n)
         if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
-      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id and n.value == mark then
         local after
         list.head, after = node.remove(list.head, n)
         return assert_unmarked(mark, after, 0)
@@ -290,7 +295,8 @@ local measure do
         x, last = x + w, n
         local dx = vmeasure(mark, n)
         if dx then return assert_unmarked(mark, n.next, head, dx + x) end
-      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id and n.value == mark then
         local w, h, d = node.dimensions(last, n)
         local after
         head, after = node.remove(head, n)
@@ -337,7 +343,8 @@ local isolate do
           offset = x + new_offset
         end
         n = n.next
-      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id then
         local w, h, d = node.rangedimensions(list, last, n)
         x = x + w
         list.head, last = node.remove(list.head, n)
@@ -385,7 +392,8 @@ local isolate do
           offset = new_offset
         end
         n = n.next
-      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id then
         local after
         list.head, after = node.remove(list.head, n)
         if 0 ~= offset  then
@@ -435,7 +443,8 @@ local isolate do
           offset = x + new_offset
         end
         n = n.next
-        elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+      elseif id == whatsit and n.subtype == user_defined
+          and n.user_id == whatsit_id then
         local w, h, d = node.dimensions(last, n)
         x = x + w
         head, last = node.remove(head, n)
@@ -455,7 +464,7 @@ local isolate do
 end
 
 local mark, afterkern
-luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n, display_type, need_penalties)
+luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n)
   if mark then
     local x
     n, x = measure(mark, n)
@@ -494,9 +503,10 @@ luacmd("SetAlignmentPoint", function()
       end
     end
     tex.error('No compatible alignment environment found',
-    'This either means that \\SetAlignmentPoint was used outside of an alignment\n\z
-      or the used alignment is not setup for use with luamathalign.\n\z
-      In the latter case you might want to look at allocated alignment classes.')
+      'This either means that \\SetAlignmentPoint was used outside\n\z
+      of an alignment or the used alignment is not setup for use with\n\z
+      luamathalign. In the latter case you might want to look at\n\z
+      non-negative alignment marks.')
   else
     return insert_whatsit(mark)
   end
@@ -546,7 +556,8 @@ luacmd("LuaMathAlign@IsolateAlignmentPoints", function()
   end
   local marks = token.scan_int()
   local head, newhead = isolate(tex.box[main])
-  tex.box[marks] = node.direct.tonode(node.direct.hpack(newhead and node.direct.todirect(newhead) or 0))
+  tex.box[marks] = node.direct.tonode(node.direct.hpack(
+      newhead and node.direct.todirect(newhead) or 0))
 end, "protected")
 %    \end{macrocode}
 % \subsection{LaTeX}
@@ -574,7 +585,8 @@ end, "protected")
   \def\align@preamble{%
      &\hfil
       \strut@
-      \setboxz@h{\@lign$\m@th\displaystyle{\LuaMathAlign@begin##\LuaMathAlign@end}$}%
+      \setboxz@h{\@lign$\m@th\displaystyle{%
+          \LuaMathAlign@begin##\LuaMathAlign@end}$}%
       \ifmeasuring@\savefieldlength@\fi
       \set@field
       \tabskip\z@skip
