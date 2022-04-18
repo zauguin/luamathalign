@@ -206,8 +206,9 @@
 %<*lua>
 % \fi
 %    \begin{macrocode}
+local properties   = node.get_properties_table()
+local prop_name    = 'mathalign'
 local luacmd       = require'luamathalign-luacmd'
-local luaprop      = require'luamathalign-luaprop'('mathalign')
 local hlist        = node.id'hlist'
 local vlist        = node.id'vlist'
 local whatsit      = node.id'whatsit'
@@ -494,10 +495,11 @@ luacmd("SetAlignmentPoint", function()
   if mark < 0 then
     for i=tex.nest.ptr,0,-1 do
       local t = tex.nest[i].head
-      if luaprop.query(t) ~= nil then
+      local props = properties[t]
+      if props and props[prop_name] ~= nil then
         mark = mark + 1
         if mark == 0 then
-          luaprop.set(t, true)
+          props[prop_name] = true
           return insert_whatsit(-i)
         end
       end
@@ -520,22 +522,34 @@ luacmd("ExecuteAlignment", function()
 end, "protected")
 
 luacmd("LuaMathAlign@begin", function()
-  local nest = tex.nest.top
-  luaprop.set(nest.head, false)
+  local t = tex.nest.top.head
+  local props = properties[t]
+  if not props then
+    props = {}
+    properties[t] = props
+  end
+  props[prop_name] = false
 end, "protected")
 luacmd("LuaMathAlign@end@early", function()
   local t = tex.nest.top.head
-  if luaprop.set(t, nil) == true then
-    handle_whatsit(-tex.nest.ptr)
+  local props = properties[t]
+  if props then
+    if props[prop_name] == true then
+      handle_whatsit(-tex.nest.ptr)
+    end
+    props[prop_name] = nil
   end
 end, "protected")
 local delayed
 luacmd("LuaMathAlign@end", function()
-  local nest = tex.nest.top
-  local t = nest.head
-  if luaprop.set(t, nil) == true then
-    assert(not delayed)
-    delayed = {get_kerntoken(-tex.nest.ptr), ampersand}
+  local t = tex.nest.top.head
+  local props = properties[t]
+  if props then
+    if props[prop_name] == true then
+      assert(not delayed)
+      delayed = {get_kerntoken(-tex.nest.ptr), ampersand}
+    end
+    props[prop_name] = nil
   end
 end, "protected")
 luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
