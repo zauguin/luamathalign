@@ -542,7 +542,7 @@ end, "luamathalign.delayed")
 luacmd("LuaMathAlign@IsolateAlignmentPoints", function()
   local main = token.scan_int()
   if not token.scan_keyword 'into' then
-    tex.error'Exected "into"'
+  tex.error'Expected "into"'
   end
   local marks = token.scan_int()
   local head, newhead = isolate(tex.box[main])
