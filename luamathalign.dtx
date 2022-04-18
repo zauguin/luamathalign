@@ -210,6 +210,7 @@ local luaprop      = require'luamathalign-luaprop'('mathalign')
 local hlist        = node.id'hlist'
 local vlist        = node.id'vlist'
 local whatsit      = node.id'whatsit'
+local kern         = node.id'kern'
 local user_defined = node.subtype'user_defined'
 local whatsit_id   = luatexbase.new_whatsit'mathalign'
 local node_cmd     = token.command_id'node'
@@ -300,6 +301,159 @@ local measure do
   end
 end
 
+local isolate do
+  local visolate
+  local function hisolate(list, offset)
+    local x, last = 0, list.head
+    local newhead, newtail = nil, nil
+    local n = last
+    while n do
+      local id = n.id
+      if id == hlist then
+        local w, h, d = node.rangedimensions(list, last, n)
+        x, last = x + w, n
+        local inner_head, inner_tail, new_offset = hisolate(n, offset - x)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = x + new_offset
+        end
+        n = n.next
+      elseif id == vlist then
+        local w, h, d = node.rangedimensions(list, last, n)
+        x, last = x + w, n
+        local inner_head, inner_tail, new_offset = visolate(n, offset - x)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = x + new_offset
+        end
+        n = n.next
+      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+        local w, h, d = node.rangedimensions(list, last, n)
+        x = x + w
+        list.head, last = node.remove(list.head, n)
+        if x ~= offset  then
+          local k = node.new(kern)
+          k.kern, offset = x - offset, x
+          newhead, newtail = node.insert_after(newhead, newtail, k)
+        end
+        newhead, newtail = node.insert_after(newhead, newtail, n)
+        n = last
+      else
+        n = n.next
+      end
+    end
+    return newhead, newtail, offset
+  end
+  function visolate(list, offset)
+    local newhead, newtail = nil, nil
+    local n = list.head
+    while n do
+      local id = n.id
+      if id == hlist then
+        if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+        local inner_head, inner_tail, new_offset = hisolate(n, offset)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = new_offset
+        end
+        n = n.next
+      elseif id == vlist then
+        if dx then return assert_unmarked(mark, n.next, dx + n.shift) end
+        local inner_head, inner_tail, new_offset = visolate(n, offset)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = new_offset
+        end
+        n = n.next
+      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+        local after
+        list.head, after = node.remove(list.head, n)
+        if 0 ~= offset  then
+          local k = node.new(kern)
+          k.kern, offset = -offset, 0
+          newhead, newtail = node.insert_after(newhead, newtail, k)
+        end
+        newhead, newtail = node.insert_after(newhead, newtail, n)
+        n = last
+      else
+        n = n.next
+      end
+    end
+    return newhead, newtail, offset
+  end
+  function isolate(head)
+    local x, last = 0, head
+    local newhead, newtail, offset = nil, nil, 0
+    local n = last
+    while n do
+      local id = n.id
+      if id == hlist then
+        local w, h, d = node.dimensions(last, n)
+        x, last = x + w, n
+        local inner_head, inner_tail, new_offset = hisolate(n, offset - x)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = x + new_offset
+        end
+        n = n.next
+      elseif id == vlist then
+        local w, h, d = node.dimensions(last, n)
+        x, last = x + w, n
+        local inner_head, inner_tail, new_offset = visolate(n, offset - x)
+        if inner_head then
+          if newhead then
+            newtail.next, inner_head.prev = inner_head, newtail
+          else
+            newhead = inner_head
+          end
+          newtail = inner_tail
+          offset = x + new_offset
+        end
+        n = n.next
+        elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id then
+        local w, h, d = node.dimensions(last, n)
+        x = x + w
+        head, last = node.remove(head, n)
+        if x ~= offset  then
+          local k = node.new(kern)
+          k.kern, offset = x - offset, x
+          newhead, newtail = node.insert_after(newhead, newtail, k)
+        end
+        newhead, newtail = node.insert_after(newhead, newtail, n)
+        n = last
+      else
+        n = n.next
+      end
+    end
+    return head, newhead
+  end
+end
+
 local mark, afterkern
 luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n, display_type, need_penalties)
   if mark then
@@ -384,6 +538,16 @@ luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
   end
   return true
 end, "luamathalign.delayed")
+
+luacmd("LuaMathAlign@IsolateAlignmentPoints", function()
+  local main = token.scan_int()
+  if not token.scan_keyword 'into' then
+    tex.error'Exected "into"'
+  end
+  local marks = token.scan_int()
+  local head, newhead = isolate(tex.box[main])
+  tex.box[marks] = node.direct.tonode(node.direct.hpack(newhead and node.direct.todirect(newhead) or 0))
+end, "protected")
 %    \end{macrocode}
 % \subsection{LaTeX}
 % \iffalse
@@ -460,6 +624,17 @@ end, "luamathalign.delayed")
     \unexpanded\expandafter{\endaligned}}
 }
 \protected\def\AlignHere{\SetAlignmentPoint\m@ne}
+\begingroup
+  \def\patch@finph@nt\setbox\tw@\null{%
+    \LuaMathAlign@IsolateAlignmentPoints\z@ into \tw@
+  }%
+\expanded{\endgroup%
+\protected\def\noexpand\finph@nt{%
+  \unexpanded\expandafter\expandafter\expandafter{%
+    \expandafter\patch@finph@nt\finph@nt
+  }%
+}}
+\ExplSyntaxOff
 %    \end{macrocode}
 % \iffalse
 %</package>
