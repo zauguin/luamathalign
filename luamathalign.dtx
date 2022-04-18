@@ -275,13 +275,36 @@ local measure do
       end
     end
   end
-  measure = hmeasure
+  function measure(mark, head)
+    local x, last = 0, head
+    for n in node.traverse(last) do
+      local id = n.id
+      if id == hlist then
+        local w, h, d = node.dimensions(last, n)
+        x, last = x + w, n
+        local dx = hmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, head, dx + x) end
+      elseif id == vlist then
+        local w, h, d = node.dimensions(last, n)
+        x, last = x + w, n
+        local dx = vmeasure(mark, n)
+        if dx then return assert_unmarked(mark, n.next, head, dx + x) end
+      elseif id == whatsit and n.subtype == user_defined and n.user_id == whatsit_id and n.value == mark then
+        local w, h, d = node.dimensions(last, n)
+        local after
+        head, after = node.remove(head, n)
+        return assert_unmarked(mark, after, head, x + w)
+      end
+    end
+    return head
+  end
 end
 
 local mark, afterkern
 luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n, display_type, need_penalties)
   if mark then
-    local x = measure(mark, n)
+    local x
+    n, x = measure(mark, n)
     local k = node.new'kern'
     local off = x - n.width
     k.kern, afterkern.kern = off, -off
@@ -289,8 +312,8 @@ luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n, display_typ
     n.width = x
     mark, afterkern = nil, nil
   end
-  return true
-end, 'align.mlist_to_hlist')
+  return n
+end, 'luamathalign')
 
 local function get_kerntoken(newmark)
   assert(not mark)
@@ -360,7 +383,7 @@ luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
     delayed = nil
   end
   return true
-end, "delayed_tokens_inserter")
+end, "luamathalign.delayed")
 %    \end{macrocode}
 % \subsection{LaTeX}
 % \iffalse
