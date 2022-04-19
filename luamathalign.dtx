@@ -207,7 +207,6 @@
 % \fi
 %    \begin{macrocode}
 local properties   = node.get_properties_table()
-local prop_name    = 'mathalign'
 local luacmd       = require'luamathalign-luacmd'
 local hlist        = node.id'hlist'
 local vlist        = node.id'vlist'
@@ -496,10 +495,10 @@ luacmd("SetAlignmentPoint", function()
     for i=tex.nest.ptr,0,-1 do
       local t = tex.nest[i].head
       local props = properties[t]
-      if props and props[prop_name] ~= nil then
+      if props and props.luamathalign_context ~= nil then
         mark = mark + 1
         if mark == 0 then
-          props[prop_name] = true
+          props.luamathalign_context = true
           return insert_whatsit(-i)
         end
       end
@@ -528,16 +527,16 @@ luacmd("LuaMathAlign@begin", function()
     props = {}
     properties[t] = props
   end
-  props[prop_name] = false
+  props.luamathalign_context = false
 end, "protected")
 luacmd("LuaMathAlign@end@early", function()
   local t = tex.nest.top.head
   local props = properties[t]
   if props then
-    if props[prop_name] == true then
+    if props.luamathalign_context == true then
       handle_whatsit(-tex.nest.ptr)
     end
-    props[prop_name] = nil
+    props.luamathalign_context = nil
   end
 end, "protected")
 local delayed
@@ -545,11 +544,11 @@ luacmd("LuaMathAlign@end", function()
   local t = tex.nest.top.head
   local props = properties[t]
   if props then
-    if props[prop_name] == true then
+    if props.luamathalign_context == true then
       assert(not delayed)
       delayed = {get_kerntoken(-tex.nest.ptr), ampersand}
     end
-    props[prop_name] = nil
+    props.luamathalign_context = nil
   end
 end, "protected")
 luatexbase.add_to_callback("hpack_filter", function(head, groupcode)
