@@ -216,6 +216,14 @@ local user_defined = node.subtype'user_defined'
 local whatsit_id   = luatexbase.new_whatsit'mathalign'
 local node_cmd     = token.command_id'node'
 local ampersand    = token.new(38, 4)
+
+local mmode do
+  for k,v in next, tex.getmodevalues() do
+    if v == 'math' then mmode = k end
+  end
+  assert(mmode)
+end
+
 -- We might want to add y later
 local function is_marked(mark, list)
   for n in node.traverse(list) do
@@ -463,25 +471,47 @@ local isolate do
   end
 end
 
-local mark, afterkern
+local function find_mmode_boundary()
+  for i=tex.nest.ptr,0,-1 do
+    local nest = tex.nest[i]
+    if nest.mode ~= mmode and nest.mode ~= -mmode then
+      return nest, i
+    end
+  end
+end
+
 luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n)
-  if mark then
+  local nest = find_mmode_boundary()
+  local props = properties[nest.head]
+  local alignment = props and props.luamathalign_alignment
+  if alignment then
+    props.luamathalign_alignment = nil
     local x
-    n, x = measure(mark, n)
+    n, x = measure(alignment.mark, n)
     local k = node.new'kern'
     local off = x - n.width
-    k.kern, afterkern.kern = off, -off
+    k.kern, alignment.afterkern.kern = off, -off
     node.insert_after(n.head, nil, k)
     n.width = x
-    mark, afterkern = nil, nil
   end
   return n
 end, 'luamathalign')
 
 local function get_kerntoken(newmark)
-  assert(not mark)
-  mark, afterkern = newmark, node.new'kern'
-  return token.new(node.direct.todirect(afterkern), node_cmd)
+  local nest = find_mmode_boundary()
+  local props = properties[nest.head]
+  if not props then
+    props = {}
+    properties[nest.head] = props
+  end
+  if props.luamathalign_alignment then
+    tex.error('Multiple alignment classes trying to control the same cell')
+    return token.new(0, 0)
+  else
+    local afterkern = node.new'kern'
+    props.luamathalign_alignment = {mark = newmark, afterkern = afterkern}
+    return token.new(node.direct.todirect(afterkern), node_cmd)
+  end
 end
 
 local function insert_whatsit(mark)
