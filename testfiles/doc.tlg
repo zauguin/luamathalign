@@ -73,7 +73,7 @@ Completed box being shipped out [1]
 ..........\OT1/cmr/m/n/10 )
 ..........\hbox(4.51111+0.0)x4.48613, shifted -2.88889, direction TLT
 ...........\OT1/cmr/m/n/7 3
-.......\kern-31.31245 (font)
+.......\glue -31.31245
 ......\mathoff
 ....\glue(\tabskip) 0.0
 ....\hbox(9.83821+3.60004)x77.78453, glue set 46.47208fil, direction TLT
@@ -81,7 +81,7 @@ Completed box being shipped out [1]
 ......\mathon
 ......\hbox(0.0+0.0)x31.31245, direction TLT
 .......\hbox(0.0+0.0)x0.0, direction TLT
-.......\kern31.31245 (font)
+.......\glue 31.31245
 ......\mathoff
 .....\glue 0.0 plus 1.0fil
 ....\glue(\tabskip) 89.5384
@@ -149,7 +149,7 @@ Completed box being shipped out [1]
 ..........\OMS/cmsy/m/n/10 ^^@
 ..........\glue(\medmuskip) 2.22217 plus 1.11108 minus 2.22217
 ..........\OT1/cmr/m/n/10 1
-.......\kern-77.78453 (font)
+.......\glue -77.78453
 ......\mathoff
 ....\glue(\tabskip) 0.0
 ....\hbox(10.62154+3.60004)x77.78453, direction TLT
@@ -157,7 +157,7 @@ Completed box being shipped out [1]
 ......\mathon
 ......\hbox(0.0+0.0)x77.78453, direction TLT
 .......\hbox(0.0+0.0)x0.0, direction TLT
-.......\kern77.78453 (font)
+.......\glue 77.78453
 ......\mathoff
 .....\glue 0.0 plus 1.0fil
 ....\glue(\tabskip) 89.5384
@@ -192,7 +192,7 @@ Completed box being shipped out [1]
 ..........\OML/cmm/m/it/10 x
 ..........\hbox(4.51111+0.0)x4.48613, shifted -2.88889, direction TLT
 ...........\OT1/cmr/m/n/7 3
-.......\kern-10.2014 (font)
+.......\glue -10.2014
 ......\mathoff
 ....\glue(\tabskip) 0.0
 ....\hbox(10.03815+3.60004)x77.78453, glue set 67.58313fil, direction TLT
@@ -200,7 +200,7 @@ Completed box being shipped out [1]
 ......\mathon
 ......\hbox(0.0+0.0)x10.2014, direction TLT
 .......\hbox(0.0+0.0)x0.0, direction TLT
-.......\kern10.2014 (font)
+.......\glue 10.2014
 ......\mathoff
 .....\glue 0.0 plus 1.0fil
 ....\glue(\tabskip) 89.5384
@@ -430,7 +430,7 @@ Completed box being shipped out [1]
 ..........\glue(\tabskip) 10.0
 ........\hbox(0.39998+29.60031)x8.05559, shifted -17.10016, direction TLT
 .........\OMX/cmex/m/n/10 )
-.......\kern-31.38884 (font)
+.......\glue -31.38884
 ......\mathoff
 ....\glue(\tabskip) 0.0
 ....\hbox(17.50014+12.50015)x31.38884, direction TLT
@@ -438,7 +438,7 @@ Completed box being shipped out [1]
 ......\mathon
 ......\hbox(0.0+0.0)x31.38884, direction TLT
 .......\hbox(0.0+0.0)x0.0, direction TLT
-.......\kern31.38884 (font)
+.......\glue 31.38884
 ......\mathoff
 .....\glue 0.0 plus 1.0fil
 ....\glue(\tabskip) 89.36272
@@ -698,7 +698,7 @@ Completed box being shipped out [1]
 ..........\glue(\tabskip) 10.0
 ........\hbox(0.39998+29.60031)x8.05559, shifted -17.10016, direction TLT
 .........\OMX/cmex/m/n/10 )
-.......\kern-31.38884 (font)
+.......\glue -31.38884
 ......\mathoff
 ....\glue(\tabskip) 0.0
 ....\hbox(17.50014+12.50015)x31.38884, direction TLT
@@ -706,7 +706,7 @@ Completed box being shipped out [1]
 ......\mathon
 ......\hbox(0.0+0.0)x31.38884, direction TLT
 .......\hbox(0.0+0.0)x0.0, direction TLT
-.......\kern31.38884 (font)
+.......\glue 31.38884
 ......\mathoff
 .....\glue 0.0 plus 1.0fil
 ....\glue(\tabskip) 89.36272

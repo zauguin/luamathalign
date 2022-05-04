@@ -211,7 +211,7 @@ local luacmd       = require'luamathalign-luacmd'
 local hlist        = node.id'hlist'
 local vlist        = node.id'vlist'
 local whatsit      = node.id'whatsit'
-local kern         = node.id'kern'
+local glue         = node.id'glue'
 local user_defined = node.subtype'user_defined'
 local whatsit_id   = luatexbase.new_whatsit'mathalign'
 local node_cmd     = token.command_id'node'
@@ -357,8 +357,8 @@ local isolate do
         x = x + w
         list.head, last = node.remove(list.head, n)
         if x ~= offset  then
-          local k = node.new(kern)
-          k.kern, offset = x - offset, x
+          local k = node.new(glue)
+          k.width, offset = x - offset, x
           newhead, newtail = node.insert_after(newhead, newtail, k)
         end
         newhead, newtail = node.insert_after(newhead, newtail, n)
@@ -405,8 +405,8 @@ local isolate do
         local after
         list.head, after = node.remove(list.head, n)
         if 0 ~= offset  then
-          local k = node.new(kern)
-          k.kern, offset = -offset, 0
+          local k = node.new(glue)
+          k.width, offset = -offset, 0
           newhead, newtail = node.insert_after(newhead, newtail, k)
         end
         newhead, newtail = node.insert_after(newhead, newtail, n)
@@ -457,8 +457,8 @@ local isolate do
         x = x + w
         head, last = node.remove(head, n)
         if x ~= offset  then
-          local k = node.new(kern)
-          k.kern, offset = x - offset, x
+          local k = node.new(glue)
+          k.width, offset = x - offset, x
           newhead, newtail = node.insert_after(newhead, newtail, k)
         end
         newhead, newtail = node.insert_after(newhead, newtail, n)
@@ -488,15 +488,19 @@ luatexbase.add_to_callback('post_mlist_to_hlist_filter', function(n)
     props.luamathalign_alignment = nil
     local x
     n, x = measure(alignment.mark, n)
-    local k = node.new'kern'
+    local k = node.new'glue'
     local off = x - n.width
-    k.kern, alignment.afterkern.kern = off, -off
+    k.width, alignment.afterkern.width = off, -off
     node.insert_after(n.head, nil, k)
     n.width = x
   end
   return n
 end, 'luamathalign')
 
+%    \end{macrocode}
+% The glue node is referred to as a kern for historical reasons. A glue node is
+% used since this interacts better with lua-ul.
+%    \begin{macrocode}
 local function get_kerntoken(newmark)
   local nest = find_mmode_boundary()
   local props = properties[nest.head]
@@ -508,7 +512,7 @@ local function get_kerntoken(newmark)
     tex.error('Multiple alignment classes trying to control the same cell')
     return token.new(0, 0)
   else
-    local afterkern = node.new'kern'
+    local afterkern = node.new'glue'
     props.luamathalign_alignment = {mark = newmark, afterkern = afterkern}
     return token.new(node.direct.todirect(afterkern), node_cmd)
   end
