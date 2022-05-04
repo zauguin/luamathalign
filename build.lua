@@ -8,7 +8,7 @@ sourcefiles = {"*.dtx", "*.lua"}
 
 uploadconfig = {
   pkg = "luamathalign",
-  version = "v0.2",
+  version = "v0.3",
   author = "Marcel Krüger",
   license = "lppl1.3c",
   summary = "More flexible alignment in amsmath environments",
