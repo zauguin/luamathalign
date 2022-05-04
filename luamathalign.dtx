@@ -617,7 +617,8 @@ end, "protected")
 % \fi
 % The actual \LaTeX\ package just loads the Lua module and patches \pkg{amsmath}:
 %    \begin{macrocode}
-% \RequirePackage{scrlfile}
+\RequirePackage{iftex}
+\RequireLuaTeX
 \directlua{require'luamathalign'}
 \IfPackageLoadedTF{amsmath}{%
   \@firstofone
